@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Bean-Genie Chat</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            overflow: hidden;
+            font-family: 'Orbitron', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #00ff00;
+            text-shadow: 0 0 5px #00ff00;
+            background: black;
+        }
+        #background-video {
+            position: fixed;
+            right: 0;
+            bottom: 0;
+            min-width: 100%;
+            min-height: 100%;
+            z-index: -1;
+            object-fit: cover;
+            filter: brightness(0.3);
+        }
+        header {
+            background-color: transparent;
+            padding: 1rem;
+            text-align: center;
+            font-size: 2rem;
+            font-weight: bold;
+            color: #00ff00;
+            font-family: 'Orbitron', monospace;
+            letter-spacing: 2px;
+            z-index: 10;
+            position: relative;
+        }
+        #chat-container {
+            flex: 1;
+            padding: 1rem;
+            overflow-y: auto;
+            background: rgba(0, 0, 0, 0.6);
+            border-left: 5px solid #00ff00;
+            border-right: 5px solid #00ff00;
+            display: flex;
+            flex-direction: column;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 1.1rem;
+            position: relative;
+            z-index: 10;
+        }
+        .message {
+            margin-bottom: 1rem;
+            max-width: 70%;
+            padding: 0.75rem 1rem;
+            border-radius: 10px;
+            box-shadow: 0 0 10px #00ff00;
+            word-wrap: break-word;
+            border: 1px solid #00ff00;
+            background-color: #001100;
+        }
+        .user-message {
+            background-color: #002200;
+            align-self: flex-end;
+            border: 1px solid #00ff00;
+        }
+        .bot-message {
+            background-color: #003300;
+            color: #00ff00;
+            align-self: flex-start;
+            border: 1px solid #00ff00;
+        }
+        #input-container {
+            display: flex;
+            padding: 1rem;
+            background-color: rgba(0, 0, 0, 0.6);
+            box-shadow: 0 -4px 10px #00ff00;
+            align-items: center;
+            position: relative;
+            z-index: 10;
+        }
+        #user-input {
+            flex: 1;
+            padding: 0.75rem 1rem;
+            font-size: 1rem;
+            border: none;
+            border-radius: 5px 0 0 5px;
+            outline: none;
+            background-color: #001100;
+            color: #00ff00;
+            font-family: 'Courier New', Courier, monospace;
+        }
+        #send-button {
+            background-color: #00ff00;
+            border: none;
+            padding: 0 1.5rem;
+            font-size: 1rem;
+            font-weight: bold;
+            color: #000000;
+            cursor: pointer;
+            border-radius: 0 5px 5px 0;
+            transition: background-color 0.3s ease;
+            box-shadow: 0 0 10px #00ff00;
+        }
+        #send-button:hover {
+            background-color: #00cc00;
+        }
+        #commands-container {
+            display: flex;
+            flex-wrap: wrap;
+            padding: 0.5rem 1rem;
+            background-color: rgba(0, 0, 0, 0.6);
+            border-top: 2px solid #00ff00;
+            gap: 0.5rem;
+            position: relative;
+            z-index: 10;
+        }
+        .command-button {
+            background-color: #000000;
+            border: 1px solid #00ff00;
+            padding: 0.5rem 1rem;
+            font-size: 0.9rem;
+            font-weight: bold;
+            color: #00ff00;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: background-color 0.3s ease;
+            font-family: 'Orbitron', monospace;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            box-shadow: 0 0 5px #00ff00;
+        }
+        .command-button:hover {
+            background-color: #003300;
+        }
+    </style>
+</head>
+<body>
+    <header>Bean-Genie Chat</header>
+    <div id="chat-container"></div>
+    <div id="commands-container">
+        <button class="command-button" data-command="!convert beans 1000">Convert Beans</button>
+        <button class="command-button" data-command="!track 15000 85">Track Progress</button>
+        <button class="command-button" data-command="!events">Events</button>
+        <button class="command-button" data-command="!growth instagram">Growth Instagram</button>
+        <button class="command-button" data-command="!sponsorship">Sponsorship Info</button>
+        <button class="command-button" data-command="!wishlist">Wishlist Guide</button>
+        <button class="command-button" data-command="!cross_promote">Cross Promotion</button>
+        <button class="command-button" data-command="!strategy 20000 100">Strategy</button>
+        <button class="command-button" data-command="!loan_info">Loan Info</button>
+        <button class="command-button" data-command="!credit_score">Credit Score</button>
+        <button id="expand-button" class="command-button">EXPAND</button>
+        <button id="restart-button" class="command-button">Restart Server</button>
+        <button id="scrape-events-button" class="command-button">Scrape Events</button>
+    </div>
+    <div id="input-container">
+        <input type="text" id="user-input" placeholder="Type your message here..." autocomplete="off" />
+        <button id="send-button">Send</button>
+    </div>
+    <script>
+        const chatContainer = document.getElementById('chat-container');
+        const userInput = document.getElementById('user-input');
+        const sendButton = document.getElementById('send-button');
+        const commandButtons = document.querySelectorAll('.command-button');
+        const restartButton = document.getElementById('restart-button');
+        const scrapeEventsButton = document.getElementById('scrape-events-button');
+
+        // Store conversation history locally
+        let conversationHistory = [];
+
+        function appendMessage(text, isUser) {
+            const messageDiv = document.createElement('div');
+            messageDiv.classList.add('message');
+            messageDiv.classList.add(isUser ? 'user-message' : 'bot-message');
+            messageDiv.textContent = text;
+            chatContainer.appendChild(messageDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        async function sendMessage(message) {
+            if (!message) return;
+            appendMessage(message, true);
+            userInput.value = '';
+
+            // Add user message to conversation history
+            conversationHistory.push({ sender: 'user', message: message });
+
+            try {
+                const response = await fetch('/api/message', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message, conversation_history: conversationHistory })
+                });
+                const data = await response.json();
+                appendMessage(data.reply, false);
+
+                // Add bot reply to conversation history
+                conversationHistory.push({ sender: 'bot', message: data.reply });
+            } catch (error) {
+                appendMessage('Error: Unable to get response from server.', false);
+            }
+        }
+
+        sendButton.addEventListener('click', () => sendMessage(userInput.value.trim()));
+        userInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                sendMessage(userInput.value.trim());
+            }
+        });
+
+        commandButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const command = button.getAttribute('data-command');
+                sendMessage(command);
+            });
+        });
+
+        const expandButton = document.getElementById('expand-button');
+        expandButton.addEventListener('click', () => {
+            sendMessage('expand');
+        });
+
+        scrapeEventsButton.addEventListener('click', () => {
+            sendMessage('!events');
+        });
+    </script>
+
+</body>
+</html>
